@@ -1,9 +1,13 @@
 import os
-from flask import Flask, render_template, request,jsonify,redirect, url_for
-from flask_wtf import CSRFProtect
-
+from models import db, User,LoginForm
 from config import settings
-from models import db, User
+from flask_wtf import CSRFProtect
+from flask_migrate import Migrate  
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request,jsonify,redirect, url_for,session
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+
+
 
 
 app = Flask(__name__)
@@ -11,9 +15,12 @@ app.config['SECRET_KEY'] = settings.secret_key
 app.config['UPLOAD_FOLDER'] = os.path.join('uploads')
 app.config['SQLALCHEMY_DATABASE_URI'] = settings.database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_TOKEN'] = settings.jwt_token
 
 
 db.init_app(app)
+migrate = Migrate(app, db)
+jwt = JWTManager(app)
 csrf = CSRFProtect(app) 
 
 # @app.before_first_request
@@ -25,7 +32,7 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 
 
 @app.route('/register', methods=['POST', 'GET'])
-def register_user():
+def register():
     if request.method == 'POST':
         if request.content_type != 'application/json':
             return jsonify({'message': 'Content-Type must be application/json'}), 415
@@ -34,46 +41,49 @@ def register_user():
         if not data:
             return jsonify({'message': 'Invalid JSON data'}), 400
 
-        name = data.get('name')
+        username = data.get('username')
         password = data.get('password')
-        if User.query.filter_by(name=name).first():
+
+        if not username or not password:
+            return jsonify({'error': 'Username,  and password are required'}), 400
+
+        if User.query.filter_by(username=username).first():
             return jsonify({'message': 'User already exists'}), 400
 
-        new_user = User(name, password)
+        hashed_password = generate_password_hash(password)
+
+        new_user = User(username=username, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return jsonify({'message' : "successfully"})
-    
+        return jsonify({'message': 'User registered successfully'}), 201
+
     else:
         return render_template('register.html')
 
 
-@app.route('/login', methods=['POST', 'GET'])
-def login_user():
-    if request.method == 'POST':
-        if request.content_type != 'application/json':
-            return jsonify({'message': 'Content-Type must be application/json'}), 415
 
-        data = request.get_json()
-        if not data:
-            return jsonify({'message': 'Invalid JSON data'}), 400
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
 
-        name = data.get('name')
-        password = data.get('password')
-        user = User.query.filter_by(name=name).first()
-        
+        user = User.query.filter_by(username=username).first()
 
-        if not user or user.password != password:
-            return jsonify({'message': 'Invalid credentials'}), 401
+        if user and check_password_hash(user.password, password):
+            # Login successful, create JWT token
+            access_token = create_access_token(identity=user.id)
+            session['jwt_token'] = access_token
+            return redirect(url_for('upload_image'))
+        else:
+            return jsonify({'error': 'Invalid username or password'}), 401
 
-        return jsonify({'message': 'User logged in successfully'})
-    
-    else:
-        return render_template('login.html')
+    return render_template('login.html', form=form)
 
 
 @app.route('/upload', methods = ['POST', 'GET'])
-
+@jwt_required()
 def upload_image( ):
     if request.method == 'POST':
         image = request.files['image']
