@@ -1,5 +1,5 @@
 # Python bytecode
-*.py[cod]
+*.pyc
 __pycache__/
 
 # Virtual environment
