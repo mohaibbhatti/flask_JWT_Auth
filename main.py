@@ -59,25 +59,6 @@ def register():
         return render_template('register.html')
 
 
-@app.route('/reset-password/<token>', methods=['POST'])
-def reset_password(token):
-    try:
-        username = serializer.loads(token, salt='password-reset-salt', max_age=3600)  # Token valid for 1 hour
-    except Exception as e:
-        return jsonify({'message': 'The token is invalid or has expired.'}), 400
-
-    data = request.get_json()
-    new_password = data.get('password')
-    user = User.query.filter_by(username=username).first()
-    if user and user.reset_token == token:
-        user.password = generate_password_hash(new_password)
-        user.reset_token = None 
-        db.session.commit()
-        return jsonify({'message': 'Password has been reset successfully.'}), 200
-    else:
-        return jsonify({'message': 'Invalid token or user not found.'}), 400
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -104,6 +85,25 @@ def login():
     if request.is_json:
         return jsonify({'error': 'Form validation failed'}), 400
     return render_template('login.html', form=form)
+
+
+@app.route('/reset-password/<token>', methods=['POST'])
+def reset_password(token):
+    try:
+        username = serializer.loads(token, salt='password-reset-salt', max_age=3600)  # Token valid for 1 hour
+    except Exception as e:
+        return jsonify({'message': 'The token is invalid or has expired.'}), 400
+
+    data = request.get_json()
+    new_password = data.get('password')
+    user = User.query.filter_by(username=username).first()
+    if user and user.reset_token == token:
+        user.password = generate_password_hash(new_password)
+        user.reset_token = None 
+        db.session.commit()
+        return jsonify({'message': 'Password has been reset successfully.'}), 200
+    else:
+        return jsonify({'message': 'Invalid token or user not found.'}), 400
 
 
 @app.route('/forgot-password', methods=['POST'])
