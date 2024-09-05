@@ -1,5 +1,6 @@
 import os
-from models import db, User,LoginForm
+from models import db, User
+from form import LoginForm
 from config import Configs
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate 
