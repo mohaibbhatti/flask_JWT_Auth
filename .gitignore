@@ -1,11 +1,10 @@
 # Python bytecode
 *.pyc
-__pycache__/
+__pycache__
 
 # Virtual environment
-venv/
-env/
-.venv/
+venv
+.venv
 .env
 
 .python-version .env

@@ -3,15 +3,102 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Image Upload</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .upload-container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .preview {
+            display: none;
+            margin-top: 20px;
+        }
+        .preview img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        .file-info, .success-message {
+            font-size: 14px;
+            color: #6c757d;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload an Image</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="image" required>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Upload</button>
-    </form>
+    <div class="container">
+        <div class="upload-container mx-auto">
+            <h1 class="text-center mb-4">Upload an Image</h1>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <input type="file" class="form-control-file" id="imageInput" name="image" accept="image/*" required>
+                    <small class="form-text text-muted">Choose an image file (JPG, PNG, GIF, etc.)</small>
+                </div>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary btn-block">Upload</button>
+            </form>
+
+            <!-- Success and Preview section -->
+            <div class="preview" id="previewSection">
+                <h5 class="mt-4">Image Preview:</h5>
+                <img id="previewImage" src="#" alt="Image Preview">
+                <p class="file-info mt-2" id="fileInfo"></p>
+                <p class="success-message mt-3 text-success" id="successMessage" style="display: none;">Image uploaded successfully!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const formData = new FormData(this);
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                // Show file information
+                const fileSize = (file.size / 1024).toFixed(2); // in KB
+                const fileType = file.type;
+                document.getElementById('fileInfo').innerText = `File Size: ${fileSize} KB, Type: ${fileType}`;
+
+                // Show image preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('previewSection').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+
+                // AJAX request to upload the image
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Image uploaded successfully') {
+                        document.getElementById('successMessage').style.display = 'block';
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            } else {
+                // Hide preview if no file is selected
+                document.getElementById('previewSection').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>

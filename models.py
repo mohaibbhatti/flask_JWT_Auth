@@ -3,7 +3,6 @@ from sqlalchemy import Integer, String
 from flask_sqlalchemy import SQLAlchemy
 from wtforms.validators import DataRequired, Email, Length
 from wtforms import StringField, PasswordField, SubmitField
-from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -11,6 +10,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(3222), nullable=False)
+    reset_token = db.Column(db.String(255), unique=True, nullable=True)
+
 
     def __repr__(self):
         return f'<User {self.username}>'
